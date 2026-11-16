@@ -19,3 +19,15 @@ os.environ["DEMO_MODE"] = "0"
 os.environ["DISABLE_DOCS"] = "0"
 os.environ.pop("TRUSTED_PROXY", None)
 os.environ.pop("AI_DAILY_LIMIT", None)
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _reset_login_lockouts():
+    """Hesab kilidi (auth.py) testlər arasında daşınmasın."""
+    from app import auth
+    auth.reset_lockouts()
+    yield
+    auth.reset_lockouts()

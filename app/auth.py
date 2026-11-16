@@ -7,13 +7,25 @@ IDE genişləndirməsi və simulyator işçi kimi deyil, INGEST_KEY gizli açar�
 import hmac
 import os
 import secrets
+import threading
 import time
+from collections import deque
 from typing import Optional
 
 from fastapi import Depends, Header, HTTPException
 
 TOKEN_TTL = 8 * 3600  # saniyə
 _sessions: dict = {}  # token -> {"role", "email", "exp"}
+
+# Brute-force qoruması: IP limitindən (ratelimit.py) əlavə, hesab üzrə və ümumi uğursuz cəhd sayğacı.
+# Bir e-poçta 15 dəqiqədə 5 səhv cəhd -> həmin hesab 15 dəqiqə kilidlənir (IP dəyişsə də).
+# Bütün hesablara 15 dəqiqədə 50 səhv cəhd -> giriş müvəqqəti hamı üçün dayanır (paylanmış hücum).
+LOCK_WINDOW = 15 * 60
+MAX_FAILS_PER_ACCOUNT = 5
+MAX_FAILS_GLOBAL = 50
+_fails: dict = {}  # normallaşdırılmış e-poçt -> deque[vaxt]
+_fails_all: deque = deque()
+_fails_lock = threading.Lock()
 
 
 def _accounts() -> dict:
@@ -23,6 +35,11 @@ def _accounts() -> dict:
         "manager": (os.environ.get("DEMO_MANAGER_EMAIL", "manager@company.com"),
                     os.environ.get("DEMO_MANAGER_PASSWORD", "admin123")),
     }
+
+
+def uses_default_passwords() -> bool:
+    """DEMO_*_PASSWORD təyin olunmayıbsa README-dəki ictimai demo parolları işləyir."""
+    return not (os.environ.get("DEMO_EMPLOYEE_PASSWORD") and os.environ.get("DEMO_MANAGER_PASSWORD"))
 
 
 def employee_ref() -> str:
@@ -40,8 +57,45 @@ def _purge() -> None:
         _sessions.pop(t, None)
 
 
+def _trim(q: deque, now: float) -> None:
+    while q and q[0] <= now - LOCK_WINDOW:
+        q.popleft()
+
+
+def _locked(key: str) -> bool:
+    now = time.time()
+    with _fails_lock:
+        _trim(_fails_all, now)
+        q = _fails.get(key)
+        if q is not None:
+            _trim(q, now)
+            if not q:
+                _fails.pop(key, None)
+        return len(_fails_all) >= MAX_FAILS_GLOBAL or (q is not None and len(q) >= MAX_FAILS_PER_ACCOUNT)
+
+
+def _record_fail(key: str) -> None:
+    now = time.time()
+    with _fails_lock:
+        if len(_fails) > 10_000:  # yaddaş sərhədi
+            _fails.clear()
+        _fails.setdefault(key, deque()).append(now)
+        _fails_all.append(now)
+
+
+def reset_lockouts() -> None:
+    """Testlər üçün."""
+    with _fails_lock:
+        _fails.clear()
+        _fails_all.clear()
+
+
 def login(email: str, password: str, role: Optional[str]) -> dict:
-    """Doğru e-poçt+parol -> token. Səhv məlumat 401, rol uyğunsuzluğu 403 verir."""
+    """Doğru e-poçt+parol -> token. Səhv məlumat 401, rol uyğunsuzluğu 403, kilid 429 verir."""
+    key = email.strip().lower()
+    if _locked(key):
+        raise HTTPException(429, "çox sayda uğursuz cəhd, 15 dəqiqə sonra yenidən cəhd edin",
+                            headers={"Retry-After": str(LOCK_WINDOW)})
     found = None
     for acc_role, (acc_email, acc_pass) in _accounts().items():
         ok_mail = _same(email.strip().lower(), acc_email.lower())
@@ -49,7 +103,10 @@ def login(email: str, password: str, role: Optional[str]) -> dict:
         if ok_mail and ok_pass:
             found = (acc_role, acc_email)
     if not found:
+        _record_fail(key)
         raise HTTPException(401, "səhv e-poçt və ya parol")
+    with _fails_lock:
+        _fails.pop(key, None)
     if role and role != found[0]:
         raise HTTPException(403, "bu hesab həmin panelə aid deyil")
     _purge()

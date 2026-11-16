@@ -112,6 +112,10 @@ async def lifespan(app: FastAPI):
             "fallback cavablarından istifadə ediləcək"
         )
 
+    if auth.uses_default_passwords() and not demo.enabled():
+        log.warning("DEMO_EMPLOYEE_PASSWORD / DEMO_MANAGER_PASSWORD təyin olunmayıb: README-dəki ictimai demo "
+                    "parolları işləyir. İctimai serverdə güclü parollar təyin edin.")
+
     if not os.getenv("INGEST_KEY"):
         log.warning("INGEST_KEY yoxdur; IDE hadisələri (/api/events) və simulyator sorğuları rədd ediləcək")
 

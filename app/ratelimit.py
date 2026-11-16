@@ -20,7 +20,7 @@ from .config import env_flag, env_int
 
 # bucket -> (sorğu sayı, pəncərə saniyə)
 DEFAULTS = {
-    "login": (10, 60),
+    "login": (5, 60),
     "reminder": (20, 60),
     "survey": (20, 60),
     "messages": (10, 60),
