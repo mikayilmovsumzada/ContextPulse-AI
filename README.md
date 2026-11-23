@@ -2,7 +2,9 @@
 
 > ContextPulse AI proqramçı fasilədən qayıdanda kontekst itkisini azaldan və komanda rəhbərinə tıxanmaları işçini izləmədən göstərən platformadır. Sistem yalnız IDE və Pull Request metadatası ilə işləyir: ekran çəkilmir, klaviatura izlənmir, kod məzmunu oxunmur.
 
-ContextPulse AI [NexusWeb](https://github.com/mikayilmovsumzada/NexusWeb-) ekosisteminin ilk məhsuludur və hazırda **hazırlanma mərhələsindədir**.
+ContextPulse AI [NexusWeb](https://nexusweb.az) ekosisteminin ilk məhsuludur və hazırda **hazırlanma mərhələsindədir**.
+
+**Sayt:** [nexusweb.az](https://nexusweb.az/az/products/contextpulse-ai) · **Oflayn demo:** [contextpulse.nexusweb.az](https://contextpulse.nexusweb.az)
 
 **Komanda:** Nuran Əliyev (ideyanın müəllifi), Elgün Hüseynli, Mikayıl Mövsümzadə.
 
