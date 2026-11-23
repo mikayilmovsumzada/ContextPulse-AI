@@ -21,8 +21,10 @@ export default defineConfig({
     domains: ["contextpulse.nexusweb.az"],
     assets: {
       htmlHandling: "auto-trailing-slash",
-      // Unknown paths (including /api/*) return 404 so the app detects "no backend".
-      notFoundHandling: "none",
+      // Page loads of client-side routes (/developer-login, /manager, …) get index.html, so links
+      // and refreshes work. Non-navigation requests (fetch/EventSource to /api/*) still get 404,
+      // so the app detects "no backend" and switches to the offline demo.
+      notFoundHandling: "single-page-application",
     },
   }),
 });
