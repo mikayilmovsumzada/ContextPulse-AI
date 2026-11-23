@@ -1,0 +1,15 @@
+{
+  "name": "contextpulse-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "cf dev",
+    "deploy": "cf deploy ../../static"
+  },
+  "devDependencies": {
+    "cf": "^1.0.0-rc.2"
+  },
+  "allowScripts": {
+    "workerd@1.20261117.1": true
+  }
+}
